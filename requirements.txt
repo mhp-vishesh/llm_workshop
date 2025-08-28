@@ -11,6 +11,8 @@ scikit-learn
 requests
 plotly
 gTTS
+sentencepiece
+
 
 
 
