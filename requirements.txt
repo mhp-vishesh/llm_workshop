@@ -1,4 +1,13 @@
 streamlit
 matplotlib
+PyPDF2
+transformers
+torch
+tokenizers
 numpy
+pandas
+scikit-learn
+requests
+plotly
+
 # Add others your app needs
