@@ -37,8 +37,8 @@ def load_gpt2_model_and_tokenizers():
 @st.cache_resource
 def load_llama2_model_and_tokenizers():
     hf_token = st.secrets["HUGGINGFACE_TOKEN"]
-    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-chat-hf", use_auth_token=hf_token)
-    model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-2-7b-chat-hf", use_auth_token=hf_token)
+    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-chat-hf", use_auth_token=True)
+    model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-2-7b-chat-hf", use_auth_token=True)
     return tokenizer, model
 
 
