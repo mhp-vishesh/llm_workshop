@@ -4,12 +4,14 @@ PyPDF2
 transformers
 torch
 tokenizers
+sentence-transformers
 numpy
 pandas
 scikit-learn
 requests
 plotly
-sentence-transformers
+gTTS
+
 
 
 # Add others your app needs
