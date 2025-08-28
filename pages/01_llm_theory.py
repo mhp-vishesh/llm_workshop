@@ -8,9 +8,7 @@ import torch
 import plotly.express as px
 import time
 import base64
-
-
-
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 
 
@@ -23,6 +21,18 @@ def load_gpt2_model_and_tokenizers():
     model = GPT2Model.from_pretrained("gpt2", output_attentions=True)
     tokenizer_fast = GPT2TokenizerFast.from_pretrained("gpt2")
     return tokenizer, model, tokenizer_fast
+
+#-------------
+# Authentication of 7B parameters
+#-------------
+@st.cache_resource
+def load_llama2_model_and_tokenizers():
+    hf_token = st.secrets["HUGGINGFACE_TOKEN"]
+    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-chat-hf", use_auth_token=hf_token)
+    model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-2-7b-chat-hf", use_auth_token=hf_token)
+    return tokenizer, model
+
+
 
 
 #--------------------------
@@ -415,6 +425,7 @@ def main():
     
     llm_overview_section()
     tokenizer, model, tokenizer_fast = load_gpt2_model_and_tokenizers()
+    llama_tokenizer, llama_model = load_llama2_model_and_tokenizers()
     tokenization_section(tokenizer_fast)
     attention_heatmap_section(tokenizer, model)
     attention_mechanism_expander()
