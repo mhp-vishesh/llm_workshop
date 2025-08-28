@@ -12,6 +12,15 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 
 
 
+
+
+token = st.secrets.get("HUGGINGFACE_TOKEN", None)
+if token:
+    st.write("Hugging Face token is set.")
+else:
+    st.write("Hugging Face token is missing.")
+
+
 # ------------------------
 # Cached model loading
 # ------------------------
