@@ -9,5 +9,7 @@ pandas
 scikit-learn
 requests
 plotly
+sentence-transformers
+
 
 # Add others your app needs
