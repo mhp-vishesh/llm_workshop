@@ -2,24 +2,19 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.animation import FuncAnimation, PillowWriter
-#import numpy as np
-from transformers import GPT2TokenizerFast, GPT2Tokenizer, GPT2Model
+from transformers import GPT2TokenizerFast, GPT2Tokenizer, GPT2Model, AutoTokenizer, AutoModelForCausalLM
 import torch
 import plotly.express as px
 import time
 import base64
-from transformers import AutoTokenizer, AutoModelForCausalLM
 
-
-
-
-
-token = st.secrets.get("HUGGINGFACE_TOKEN", None)
-if token:
-    st.write("Hugging Face token is set.")
+# Fetch Hugging Face token securely from Streamlit secrets
+hf_token = st.secrets.get("HUGGINGFACE_TOKEN")
+if not hf_token:
+    st.error("Hugging Face token missing. Please add it in Streamlit Secrets.")
+    st.stop()
 else:
-    st.write("Hugging Face token is missing.")
-
+    st.write("Hugging Face token is set.")
 
 # ------------------------
 # Cached model loading
@@ -32,23 +27,17 @@ def load_gpt2_model_and_tokenizers():
     return tokenizer, model, tokenizer_fast
 
 #-------------
-# Authentication of 7B parameters
+# Authentication of 7B parameters with explicit token parameter (not deprecated)
 #-------------
 @st.cache_resource
 def load_llama2_model_and_tokenizers():
-    hf_token = st.secrets["HUGGINGFACE_TOKEN"]
-    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-chat-hf", use_auth_token=True)
-    model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-2-7b-chat-hf", use_auth_token=True)
+    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-chat-hf", token=hf_token)
+    model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-2-7b-chat-hf", token=hf_token)
     return tokenizer, model
 
-
-
-
 #--------------------------
-#LLM Theory Text
+# LLM Theory Text (rest of your code follows unchanged)
 #--------------------------
-
-
 def display_pdf_in_expander(file_path):
     with st.expander("DataBricks_LLM_eBook", expanded=True):
         with open(file_path, "rb") as f:
@@ -62,8 +51,6 @@ def display_pdf_in_expander(file_path):
             </iframe>
         '''
         st.markdown(pdf_display, unsafe_allow_html=True)
-
-# Usage:
 
 
 
@@ -422,16 +409,10 @@ def workshop_resources_dropdown():
 # Main orchestrator
 # ------------------------
 def main():
-    
     st.markdown("<h1 style='text-align: center;'>Let us learn theory in a fun way!!!!</h1>", unsafe_allow_html=True)
     st.markdown("---")
-    
-    
-    
     display_pdf_in_expander("./resources/LLM_guide.pdf")
-    
     st.markdown("---")
-    
     llm_overview_section()
     tokenizer, model, tokenizer_fast = load_gpt2_model_and_tokenizers()
     llama_tokenizer, llama_model = load_llama2_model_and_tokenizers()
