@@ -139,7 +139,7 @@ if uploaded_file is not None:
             st.session_state["last_answer"] = None
         st.success("✅ PDF text extracted and embedded.")
 
-if st.session_state.get("doc_chunks") and st.session_state.get("doc_embeddings"):
+if st.session_state.get("doc_chunks") is not None and st.session_state.get("doc_embeddings") is not None:
     st.subheader("🧩 Extracted Text Chunks")
     with st.expander("View extracted chunks"):
         for i, chunk in enumerate(st.session_state["doc_chunks"]):
