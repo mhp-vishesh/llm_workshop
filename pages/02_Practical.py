@@ -15,15 +15,26 @@ import base64
 @st.cache_resource(show_spinner=False)
 def load_embedding_model():
     return SentenceTransformer("all-MiniLM-L6-v2")
+
+
+
+
 """
 @st.cache_resource(show_spinner=False)
-def load_distilgpt2_model():
-    tokenizer = AutoTokenizer.from_pretrained("distilgpt2")
-    model = AutoModelForCausalLM.from_pretrained("distilgpt2")
-    model.eval()
+def load_llama7b_model():
+    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b")  # or corresponding repo
+    model = AutoModelForCausalLM.from_pretrained(
+        "meta-llama/Llama-2-7b",
+        device_map="auto",
+        load_in_8bit=True,              # if bitsandbytes quantization desired
+        # or other quantization configs like 4-bit with BitsAndBytesConfig
+    )
     return tokenizer, model
-"""
 
+
+
+
+#original code what works
 
 
 @st.cache_resource(show_spinner=False)
@@ -34,6 +45,39 @@ def load_distilgpt2_model():
         device_map="auto"
     )
     model.eval()
+    return tokenizer, model
+
+
+embedding_model = load_embedding_model()
+tokenizer, distilgpt2_model = load_distilgpt2_model()
+
+
+
+
+
+
+"""
+
+
+
+
+
+
+
+
+
+
+
+
+
+@st.cache_resource(show_spinner=False)
+def load_distilgpt2_model():
+    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b")
+    model = AutoModelForCausalLM.from_pretrained(
+        "meta-llama/Llama-2-7b",
+        device_map="auto",
+        load_in_8bit=True, 
+    )
     return tokenizer, model
 
 
@@ -111,50 +155,6 @@ def distilgpt2_generate_answer(user_prompt, question, context, tokenizer, model,
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-"""
-
-def distilgpt2_generate_answer(system_prompt, question_text, context_text, tokenizer, model, max_length=256, temperature=0.7):
-    full_prompt = (
-        f"{system_prompt}\n\nContext: {context_text}\n\nQuestion: {question_text}\nAnswer:"
-    )
-    try:
-        max_model_length = tokenizer.model_max_length
-        if max_model_length > 1024 or max_model_length < 1:
-            max_model_length = 1024
-    except AttributeError:
-        max_model_length = 1024
-    
-    inputs = tokenizer(
-        full_prompt,
-        return_tensors="pt",
-        padding=True,
-        truncation=True,
-        max_length=max_model_length,
-    ).to(model.device)
-
-    with torch.no_grad():
-        outputs = model.generate(
-            **inputs,
-            max_new_tokens=max_length,
-            do_sample=True,
-            temperature=temperature,
-            pad_token_id=tokenizer.eos_token_id,
-        )
-    answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    return answer.split("Answer:")[-1].strip()
-"""
 
 def tts_to_bytesio(text, lang="en", tld="com"):
     try:
