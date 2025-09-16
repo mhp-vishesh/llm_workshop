@@ -79,12 +79,13 @@ def distilgpt2_generate_answer(system_prompt, question_text, context_text, token
     full_prompt = (
         f"{system_prompt}\n\nContext: {context_text}\n\nQuestion: {question_text}\nAnswer:"
     )
+    max_model_length = tokenizer.model_max_length  # usually 1024 for distilgpt2
     inputs = tokenizer(
         full_prompt,
         return_tensors="pt",
         padding=True,
         truncation=True,
-        max_length= 1024,
+        max_length= max_model_length,
     ).to(model.device)
     with torch.no_grad():
         outputs = model.generate(
