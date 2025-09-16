@@ -31,11 +31,11 @@ def load_distilgpt2_model():
     tokenizer = AutoTokenizer.from_pretrained("distilgpt2")
     model = AutoModelForCausalLM.from_pretrained(
         "distilgpt2",
-        device_map="auto",       # Automatically distribute model
-        load_in_4bit=True        # Enable 4-bit quantization (if you want)
+        device_map="auto"
     )
     model.eval()
     return tokenizer, model
+
 
 embedding_model = load_embedding_model()
 tokenizer, distilgpt2_model = load_distilgpt2_model()
