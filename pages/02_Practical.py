@@ -94,7 +94,7 @@ def build_context(chunks, tokenizer, max_tokens=MAX_CONTEXT_TOKENS):
     context = ""
     total_tokens = 0
     for chunk in chunks:
-        chunk_tokens = len(tokenizer(chunk).input_ids)
+        chunk_tokens = len(tokenizer.encode(chunk))
         if total_tokens + chunk_tokens > max_tokens:
             break
         context += chunk + " "
