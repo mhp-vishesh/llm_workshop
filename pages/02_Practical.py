@@ -84,7 +84,7 @@ def distilgpt2_generate_answer(system_prompt, question_text, context_text, token
         return_tensors="pt",
         padding=True,
         truncation=True,
-        max_length=2048,
+        max_length= 1024,
     ).to(model.device)
     with torch.no_grad():
         outputs = model.generate(
