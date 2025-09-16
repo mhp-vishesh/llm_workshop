@@ -79,14 +79,23 @@ def distilgpt2_generate_answer(system_prompt, question_text, context_text, token
     full_prompt = (
         f"{system_prompt}\n\nContext: {context_text}\n\nQuestion: {question_text}\nAnswer:"
     )
-    max_model_length = tokenizer.model_max_length  # usually 1024 for distilgpt2
+
+    # Set max input length capped at 1024 tokens (distilgpt2 max capacity)
+    try:
+        max_model_length = tokenizer.model_max_length
+        if max_model_length > 1024 or max_model_length < 1:
+            max_model_length = 1024
+    except AttributeError:
+        max_model_length = 1024  # fallback
+        
     inputs = tokenizer(
         full_prompt,
         return_tensors="pt",
         padding=True,
         truncation=True,
-        max_length= max_model_length,
+        max_length=max_model_length,
     ).to(model.device)
+
     with torch.no_grad():
         outputs = model.generate(
             **inputs,
@@ -97,6 +106,7 @@ def distilgpt2_generate_answer(system_prompt, question_text, context_text, token
         )
     answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return answer.split("Answer:")[-1].strip()
+
 
 def tts_to_bytesio(text, lang="en", tld="com"):
     try:
