@@ -8,7 +8,6 @@ import plotly.express as px
 import time
 import base64
 
-# Fetch Hugging Face token securely
 hf_token = st.secrets.get("HUGGINGFACE_TOKEN")
 if not hf_token:
     st.error("Hugging Face token missing. Please add it in Streamlit Secrets.")
@@ -16,9 +15,6 @@ if not hf_token:
 else:
     st.write("Hugging Face token is set.")
 
-# ------------------------
-# Cached model loading
-# ------------------------
 @st.cache_resource
 def load_gpt2_model_and_tokenizers():
     tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
@@ -36,9 +32,6 @@ def load_llama2_model_and_tokenizers():
     )
     return tokenizer, model
 
-#--------------------------
-# LLM Theory Text
-#--------------------------
 def display_pdf_in_expander(file_path):
     with st.expander("DataBricks_LLM_eBook", expanded=True):
         with open(file_path, "rb") as f:
@@ -122,7 +115,7 @@ def tokenization_section(tokenizer_fast):
     if sentence.strip():
         gif_path = create_tokenization_gif(tokenizer_fast, sentence)
         if gif_path:
-            st.image(gif_path)
+            st.image(gif_path, width="stretch")
     else:
         st.warning("⚠️ Please enter a sentence.")
 
@@ -206,12 +199,12 @@ def llm_parameters_explanation():
         st.image(
             "./resources/Tempearture.png",
             caption="Effect of Temperature on model creativity",
-            use_container_width=True,
+            width="stretch",
         )
         st.image(
             "./resources/Top_parameters.png",
             caption="Difference between Top-K and Top-P Sampling",
-            use_container_width=True,
+            width="stretch",
         )
         st.markdown("""
         For more detailed explanations and interactive visualizations, refer to the external resources within this app and beyond.
