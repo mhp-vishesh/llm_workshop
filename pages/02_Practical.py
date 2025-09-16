@@ -154,7 +154,6 @@ if st.session_state.get("doc_chunks") is not None and st.session_state.get("doc_
             st.write(f"Chunk {i+1}:")
             st.write(chunk)
             st.markdown("---")
-
     default_prompt = (
         "You are a knowledgeable and insightful virtual assistant with comprehensive expertise on Tacan cars. "
         "Always provide responses that remain contextually relevant to the information provided, "
@@ -172,4 +171,59 @@ if st.session_state.get("doc_chunks") is not None and st.session_state.get("doc_
             "You are uninterested, unenthusiastic, and respond in a monotone, lifeless way."
         ),
         "Disrespectful Assistant": (
-            "You are a disrespectful assistant who is dismissive and ignores social nic
+            "You are a disrespectful assistant who is dismissive and ignores social niceties."
+        ),
+        "Custom...": None
+    }
+    with st.expander("🎭 Choose Assistant Personality / Prompt", expanded=False):
+        persona = st.selectbox(
+            "Select a persona for the assistant:",
+            list(prompt_options.keys()),
+            key="persona_select"
+        )
+        if persona == "Custom...":
+            user_prompt = st.text_area(
+                "Write your own assistant prompt:",
+                value="You are a creative and helpful AI.",
+                height=100,
+                key="custom_prompt"
+            )
+        else:
+            user_prompt = prompt_options[persona]
+        st.markdown(f"**Active persona prompt:**\n\n> {user_prompt}")
+
+    st.subheader("🎛️ Hyperparameters")
+    col1, col2 = st.columns(2)
+    temperature = col1.slider("Temperature", 0.0, 1.0, 0.7, 0.05)
+    max_tokens = col2.slider("Max tokens", 50, 300, 256, 10)
+    question = st.text_input("🔎 Ask a question about the PDF:")
+
+    if st.button("🎤 Get Answer with Speech"):
+        if not question.strip():
+            st.warning("Please enter a question.")
+        else:
+            with st.spinner("Generating answer with LLaMA..."):
+                q_emb = embedding_model.encode(question, convert_to_tensor=True)
+                hits = util.semantic_search(
+                    q_emb, st.session_state["doc_embeddings"], top_k=8
+                )[0]
+                selected_chunks = [st.session_state["doc_chunks"][hit["corpus_id"]] for hit in hits]
+                context_clean = build_context(selected_chunks, tokenizer, max_tokens=MAX_CONTEXT_TOKENS)
+
+                answer = distilgpt2_generate_answer(
+                    user_prompt, question, context_clean, tokenizer, distilgpt2_model,
+                    max_length=max_tokens, temperature=temperature
+                )
+                st.session_state["last_answer"] = answer
+
+            
+            
+    if st.session_state.get("last_answer"):
+        st.markdown("### 💬 Text Answer")
+        st.write(st.session_state["last_answer"])
+        st.markdown("### 🎧 Speech Output")
+        audio_buffer = tts_to_bytesio(st.session_state["last_answer"])
+        play_audio_from_bytesio(audio_buffer)
+
+else:
+    st.info("Please upload a PDF to begin.")
