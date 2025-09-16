@@ -13,6 +13,7 @@ scikit-learn==1.7.2
 requests==2.32.5
 plotly==6.3.0
 gTTS==2.5.4
-pip install bitsandbytes
+bitsandbytes
+
 
 #### modified on 16.09.2025
