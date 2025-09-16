@@ -17,20 +17,35 @@ def load_embedding_model():
 
 
 
+
+
+import streamlit as st
+from transformers import LlamaForCausalLM, LlamaTokenizer
+import torch
+
 @st.cache_resource(show_spinner=False)
 def load_llama_model(model_name="meta-llama/Llama-2-7b-chat-hf"):
-    hf_token = st.secrets["HUGGINGFACE_TOKEN"]
-    tokenizer = LlamaTokenizer.from_pretrained(model_name, use_auth_token=hf_token)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-    model = LlamaForCausalLM.from_pretrained(
-        model_name,
-        use_auth_token=hf_token,
-        device_map="auto",
-        torch_dtype=torch.float16,
-    )
-    model.eval()
-    return tokenizer, model
+    hf_token = st.secrets.get("HUGGINGFACE_TOKEN", None)
+    if hf_token is None:
+        st.error("Hugging Face token is missing from secrets. Please add it in Streamlit Cloud.")
+        return None, None
+    
+    try:
+        tokenizer = LlamaTokenizer.from_pretrained(model_name, use_auth_token=hf_token)
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
+        model = LlamaForCausalLM.from_pretrained(
+            model_name,
+            use_auth_token=hf_token,
+            device_map="auto",
+            torch_dtype=torch.float16,
+        )
+        model.eval()
+        return tokenizer, model
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        return None, None
+
 
 
 
