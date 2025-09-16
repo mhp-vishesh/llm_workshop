@@ -15,11 +15,25 @@ import base64
 @st.cache_resource(show_spinner=False)
 def load_embedding_model():
     return SentenceTransformer("all-MiniLM-L6-v2")
-
+"""
 @st.cache_resource(show_spinner=False)
 def load_distilgpt2_model():
     tokenizer = AutoTokenizer.from_pretrained("distilgpt2")
     model = AutoModelForCausalLM.from_pretrained("distilgpt2")
+    model.eval()
+    return tokenizer, model
+"""
+
+
+
+@st.cache_resource(show_spinner=False)
+def load_distilgpt2_model():
+    tokenizer = AutoTokenizer.from_pretrained("distilgpt2")
+    model = AutoModelForCausalLM.from_pretrained(
+        "distilgpt2",
+        device_map="auto",       # Automatically distribute model
+        load_in_4bit=True        # Enable 4-bit quantization (if you want)
+    )
     model.eval()
     return tokenizer, model
 
