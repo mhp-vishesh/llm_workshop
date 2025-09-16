@@ -8,13 +8,15 @@ import plotly.express as px
 import time
 import base64
 
+# Check for Hugging Face token, required for some models, else stop
 hf_token = st.secrets.get("HUGGINGFACE_TOKEN")
 if not hf_token:
-    st.error("Hugging Face token missing. Please add it in Streamlit Secrets.")
-    st.stop()
-else:
-    st.write("Hugging Face token is set.")
+    st.warning("Hugging Face token missing. For distilgpt2, token is optional but recommended.")
+# For distilgpt2 no token is needed, so no st.stop()
 
+# ------------------------
+# Cached model loading
+# ------------------------
 @st.cache_resource
 def load_gpt2_model_and_tokenizers():
     tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
@@ -23,15 +25,15 @@ def load_gpt2_model_and_tokenizers():
     return tokenizer, model, tokenizer_fast
 
 @st.cache_resource
-def load_llama2_model_and_tokenizers():
-    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-chat-hf", token=hf_token)
-    model = AutoModelForCausalLM.from_pretrained(
-        "meta-llama/Llama-2-7b-chat-hf",
-        token=hf_token,
-        dtype=torch.float16,
-    )
+def load_small_model_and_tokenizers():
+    # distilgpt2 is smaller and faster than Llama 2 7B for limited resource envs
+    tokenizer = AutoTokenizer.from_pretrained("distilgpt2")
+    model = AutoModelForCausalLM.from_pretrained("distilgpt2")
     return tokenizer, model
 
+#--------------------------
+# LLM Theory Text (rest unchanged)
+#--------------------------
 def display_pdf_in_expander(file_path):
     with st.expander("DataBricks_LLM_eBook", expanded=True):
         with open(file_path, "rb") as f:
@@ -297,7 +299,7 @@ def main():
     st.markdown("---")
     llm_overview_section()
     tokenizer, model, tokenizer_fast = load_gpt2_model_and_tokenizers()
-    llama_tokenizer, llama_model = load_llama2_model_and_tokenizers()
+    distilgpt_tokenizer, distilgpt_model = load_small_model_and_tokenizers()
     tokenization_section(tokenizer_fast)
     attention_heatmap_section(tokenizer, model)
     attention_mechanism_expander()
