@@ -15,18 +15,24 @@ import base64
 def load_embedding_model():
     return SentenceTransformer("all-MiniLM-L6-v2")
 
+
+
 @st.cache_resource(show_spinner=False)
 def load_llama_model(model_name="meta-llama/Llama-2-7b-chat-hf"):
-    tokenizer = LlamaTokenizer.from_pretrained(model_name)
+    hf_token = st.secrets["HUGGINGFACE_TOKEN"]
+    tokenizer = LlamaTokenizer.from_pretrained(model_name, use_auth_token=hf_token)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     model = LlamaForCausalLM.from_pretrained(
         model_name,
+        use_auth_token=hf_token,
         device_map="auto",
         torch_dtype=torch.float16,
     )
     model.eval()
     return tokenizer, model
+
+
 
 embedding_model = load_embedding_model()
 tokenizer, llama_model = load_llama_model()
