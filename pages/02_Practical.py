@@ -95,14 +95,21 @@ def build_context(chunks, tokenizer, max_tokens=MAX_CONTEXT_TOKENS, reserved_tok
 def distilgpt2_generate_answer(user_prompt, question, context, tokenizer, model, max_new_tokens=200, temperature=0.7):
     full_prompt = f"{user_prompt}\nQuestion: {question}\nContext: {context}\nAnswer:"
     inputs = tokenizer(full_prompt, return_tensors="pt", truncation=True).to(model.device)
-    outputs = model.generate(
-        **inputs,
-        max_new_tokens=max_new_tokens,
-        temperature=temperature,
-        do_sample=True,
-        top_p=0.95
-    )
+    try:
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=int(max_new_tokens),
+            temperature=temperature,
+            do_sample=True,
+            top_p=0.95,
+            pad_token_id=tokenizer.eos_token_id,
+            num_beams=3,
+            repetition_penalty=1.2
+        )
+    except Exception as e:
+        return f"Generation error: {e}"
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
+
 
 
 
