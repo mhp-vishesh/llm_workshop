@@ -270,9 +270,10 @@ if st.session_state.get("doc_chunks") is not None and st.session_state.get("doc_
                     selected_chunks = [st.session_state["doc_chunks"][hit["corpus_id"]] for hit in hits]
                     context_clean = build_context(selected_chunks, tokenizer, max_tokens=MAX_CONTEXT_TOKENS)
                     answer = distilgpt2_generate_answer(
-                        user_prompt, question, context_clean, tokenizer, distilgpt2_model,
-                        max_length=max_tokens, temperature=temperature
-                    )
+                                    user_prompt, question, context_clean, tokenizer, distilgpt2_model,
+                                    max_new_tokens=int(max_tokens), temperature=temperature
+                                )
+
                     st.session_state["last_answer"] = answer
 
     if st.session_state.get("last_answer"):
