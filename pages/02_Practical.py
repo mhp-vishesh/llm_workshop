@@ -77,6 +77,33 @@ def build_context(chunks, tokenizer, max_tokens=MAX_CONTEXT_TOKENS, reserved_tok
         total_tokens += chunk_tokens
     return context.strip()
 
+
+def distilgpt2_generate_answer(user_prompt, question, context, tokenizer, model, max_new_tokens=200, temperature=0.7):
+    full_prompt = f"{user_prompt}\nQuestion: {question}\nContext: {context}\nAnswer:"
+    inputs = tokenizer(full_prompt, return_tensors="pt", truncation=True).to(model.device)
+    outputs = model.generate(
+        **inputs,
+        max_new_tokens=max_new_tokens,
+        temperature=temperature,
+        do_sample=True,
+        top_p=0.95
+    )
+    return tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
+
 def distilgpt2_generate_answer(system_prompt, question_text, context_text, tokenizer, model, max_length=256, temperature=0.7):
     full_prompt = (
         f"{system_prompt}\n\nContext: {context_text}\n\nQuestion: {question_text}\nAnswer:"
@@ -106,6 +133,7 @@ def distilgpt2_generate_answer(system_prompt, question_text, context_text, token
         )
     answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return answer.split("Answer:")[-1].strip()
+"""
 
 def tts_to_bytesio(text, lang="en", tld="com"):
     try:
