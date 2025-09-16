@@ -32,6 +32,7 @@ tokenizer, distilgpt2_model = load_distilgpt2_model()
 
 MAX_CONTEXT_TOKENS = 1024
 MAX_CHUNK_SIZE = 1000  # characters approx
+RESERVED_TOKENS_FOR_OUTPUT = 128  # keep output room in context length
 
 def extract_text_from_pdf(file) -> str:
     reader = PyPDF2.PdfReader(file)
@@ -64,12 +65,13 @@ def chunk_text(text, max_chunk_size=MAX_CHUNK_SIZE):
 def embed_chunks(chunks):
     return embedding_model.encode(chunks, convert_to_tensor=True)
 
-def build_context(chunks, tokenizer, max_tokens=MAX_CONTEXT_TOKENS):
+def build_context(chunks, tokenizer, max_tokens=MAX_CONTEXT_TOKENS, reserved_tokens=RESERVED_TOKENS_FOR_OUTPUT):
     context = ""
     total_tokens = 0
+    max_available = max_tokens - reserved_tokens
     for chunk in chunks:
         chunk_tokens = len(tokenizer.encode(chunk))
-        if total_tokens + chunk_tokens > max_tokens:
+        if total_tokens + chunk_tokens > max_available:
             break
         context += chunk + " "
         total_tokens += chunk_tokens
@@ -79,15 +81,13 @@ def distilgpt2_generate_answer(system_prompt, question_text, context_text, token
     full_prompt = (
         f"{system_prompt}\n\nContext: {context_text}\n\nQuestion: {question_text}\nAnswer:"
     )
-
-    # Set max input length capped at 1024 tokens (distilgpt2 max capacity)
     try:
         max_model_length = tokenizer.model_max_length
         if max_model_length > 1024 or max_model_length < 1:
             max_model_length = 1024
     except AttributeError:
-        max_model_length = 1024  # fallback
-        
+        max_model_length = 1024
+    
     inputs = tokenizer(
         full_prompt,
         return_tensors="pt",
@@ -106,7 +106,6 @@ def distilgpt2_generate_answer(system_prompt, question_text, context_text, token
         )
     answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return answer.split("Answer:")[-1].strip()
-
 
 def tts_to_bytesio(text, lang="en", tld="com"):
     try:
@@ -165,6 +164,7 @@ if st.session_state.get("doc_chunks") is not None and st.session_state.get("doc_
             st.write(f"Chunk {i+1}:")
             st.write(chunk)
             st.markdown("---")
+
     default_prompt = (
         "You are a knowledgeable and insightful virtual assistant with comprehensive expertise on Tacan cars. "
         "Always provide responses that remain contextually relevant to the information provided, "
@@ -208,27 +208,24 @@ if st.session_state.get("doc_chunks") is not None and st.session_state.get("doc_
     temperature = col1.slider("Temperature", 0.0, 1.0, 0.7, 0.05)
     max_tokens = col2.slider("Max tokens", 50, 300, 256, 10)
     question = st.text_input("🔎 Ask a question about the PDF:")
-
     if st.button("🎤 Get Answer with Speech"):
         if not question.strip():
             st.warning("Please enter a question.")
         else:
-            with st.spinner("Generating answer with LLaMA..."):
-                q_emb = embedding_model.encode(question, convert_to_tensor=True)
-                hits = util.semantic_search(
-                    q_emb, st.session_state["doc_embeddings"], top_k=8
-                )[0]
-                selected_chunks = [st.session_state["doc_chunks"][hit["corpus_id"]] for hit in hits]
-                context_clean = build_context(selected_chunks, tokenizer, max_tokens=MAX_CONTEXT_TOKENS)
+            if tokenizer is None or distilgpt2_model is None:
+                st.error("Model is not loaded correctly. Please check.")
+            else:
+                with st.spinner("Generating answer..."):
+                    q_emb = embedding_model.encode(question, convert_to_tensor=True)
+                    hits = util.semantic_search(q_emb, st.session_state["doc_embeddings"], top_k=8)[0]
+                    selected_chunks = [st.session_state["doc_chunks"][hit["corpus_id"]] for hit in hits]
+                    context_clean = build_context(selected_chunks, tokenizer, max_tokens=MAX_CONTEXT_TOKENS)
+                    answer = distilgpt2_generate_answer(
+                        user_prompt, question, context_clean, tokenizer, distilgpt2_model,
+                        max_length=max_tokens, temperature=temperature
+                    )
+                    st.session_state["last_answer"] = answer
 
-                answer = distilgpt2_generate_answer(
-                    user_prompt, question, context_clean, tokenizer, distilgpt2_model,
-                    max_length=max_tokens, temperature=temperature
-                )
-                st.session_state["last_answer"] = answer
-
-            
-            
     if st.session_state.get("last_answer"):
         st.markdown("### 💬 Text Answer")
         st.write(st.session_state["last_answer"])
