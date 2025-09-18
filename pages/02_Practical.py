@@ -1,3 +1,34 @@
+
+import huggingface_hub
+from huggingface_hub import hf_hub_download
+import os
+import requests
+
+def cached_download(url_or_filename, cache_dir=None, **kwargs):
+    if str(url_or_filename).startswith(("http://", "https://")):
+        if cache_dir is None:
+            cache_dir = os.path.expanduser("~/.cache/huggingface/hub")
+        os.makedirs(cache_dir, exist_ok=True)
+        filename = os.path.basename(url_or_filename)
+        cache_path = os.path.join(cache_dir, filename)
+        if os.path.exists(cache_path):
+            return cache_path
+        response = requests.get(url_or_filename, stream=True)
+        response.raise_for_status()
+        with open(cache_path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        return cache_path
+    else:
+        # fall back to repo download via huggingface_hub's hf_hub_download
+        return hf_hub_download(repo_id=url_or_filename, **kwargs)
+
+huggingface_hub.cached_download = cached_download
+
+
+
+
+
 import streamlit as st
 import PyPDF2
 import re
@@ -7,6 +38,11 @@ from gtts import gTTS
 import torch
 from transformers import LlamaForCausalLM, LlamaTokenizer
 import base64
+
+from huggingface_hub import login
+import os
+
+
 
 # ----------------------------
 # Model loading
