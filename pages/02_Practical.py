@@ -1,64 +1,29 @@
-import huggingface_hub
-from huggingface_hub import hf_hub_download
-import os
-import requests
-import io
-import asyncio
-import edge_tts
 import streamlit as st
 import PyPDF2
 import re
+import io
 from sentence_transformers import SentenceTransformer, util
+from gtts import gTTS
 import torch
-from transformers import (
-    AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig,
-    TextStreamer
-)
+from transformers import LlamaForCausalLM, LlamaTokenizer
 import base64
-from huggingface_hub import login
 
-# Monkey patch cached_download to replace removed function
-def cached_download(url_or_filename, cache_dir=None, **kwargs):
-    if str(url_or_filename).startswith(("http://", "https://")):
-        if cache_dir is None:
-            cache_dir = os.path.expanduser("~/.cache/huggingface/hub")
-        os.makedirs(cache_dir, exist_ok=True)
-        filename = os.path.basename(url_or_filename)
-        cache_path = os.path.join(cache_dir, filename)
-        if os.path.exists(cache_path):
-            return cache_path
-        response = requests.get(url_or_filename, stream=True)
-        response.raise_for_status()
-        with open(cache_path, "wb") as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        return cache_path
-    else:
-        return hf_hub_download(repo_id=url_or_filename, **kwargs)
-
-huggingface_hub.cached_download = cached_download
-
-
-
-# Load embedding model
+# ----------------------------
+# Model loading
+# ----------------------------
 @st.cache_resource(show_spinner=False)
 def load_embedding_model():
     return SentenceTransformer("all-MiniLM-L6-v2")
 
-# Load quantized Llama-2 7B model with 4-bit quantization and set pad_token
 @st.cache_resource(show_spinner=False)
 def load_llama_model(model_name="meta-llama/Llama-2-7b-chat-hf"):
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer = LlamaTokenizer.from_pretrained(model_name)
     if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token   # FIX for pad token error
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_compute_dtype=torch.float16,
-    )
-    model = AutoModelForCausalLM.from_pretrained(
+        tokenizer.pad_token = tokenizer.eos_token
+    model = LlamaForCausalLM.from_pretrained(
         model_name,
-        quantization_config=bnb_config,
         device_map="auto",
+        torch_dtype=torch.float16,
     )
     model.eval()
     return tokenizer, model
@@ -66,8 +31,12 @@ def load_llama_model(model_name="meta-llama/Llama-2-7b-chat-hf"):
 embedding_model = load_embedding_model()
 tokenizer, llama_model = load_llama_model()
 
+# ----------------------------
+# Helpers
+# ----------------------------
+
 MAX_CONTEXT_TOKENS = 1024
-MAX_CHUNK_SIZE = 1000
+MAX_CHUNK_SIZE = 1000  # characters approx
 
 def extract_text_from_pdf(file) -> str:
     reader = PyPDF2.PdfReader(file)
@@ -111,7 +80,7 @@ def build_context(chunks, tokenizer, max_tokens=MAX_CONTEXT_TOKENS):
         total_tokens += chunk_tokens
     return context.strip()
 
-def llama_generate_answer(system_prompt, question_text, context_text, tokenizer, model, max_length=100, temperature=0.7):
+def llama_generate_answer(system_prompt, question_text, context_text, tokenizer, model, max_length=256, temperature=0.7):
     full_prompt = (
         f"{system_prompt}\n\nContext: {context_text}\n\nQuestion: {question_text}\nAnswer:"
     )
@@ -122,9 +91,6 @@ def llama_generate_answer(system_prompt, question_text, context_text, tokenizer,
         truncation=True,
         max_length=2048,
     ).to(model.device)
-
-    streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
-
     with torch.no_grad():
         outputs = model.generate(
             **inputs,
@@ -132,24 +98,20 @@ def llama_generate_answer(system_prompt, question_text, context_text, tokenizer,
             do_sample=True,
             temperature=temperature,
             pad_token_id=tokenizer.pad_token_id,
-            streamer=streamer,
         )
     answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return answer.split("Answer:")[-1].strip()
 
-# Edge TTS functions for speech output
-async def tts_to_bytesio(text, voice="en-US-AriaNeural"):
-    import edge_tts
-    mp3_buffer = io.BytesIO()
-    communicate = edge_tts.Communicate(text, voice)
-    async for chunk in communicate.stream():
-        if chunk["type"] == "audio":
-            mp3_buffer.write(chunk["data"])
-    mp3_buffer.seek(0)
-    return mp3_buffer
-
-def sync_tts(text, voice="en-US-AriaNeural"):
-    return asyncio.run(tts_to_bytesio(text, voice))
+def tts_to_bytesio(text, lang="en", tld="com"):
+    try:
+        mp3_buffer = io.BytesIO()
+        tts = gTTS(text=text, lang=lang, tld=tld)
+        tts.write_to_fp(mp3_buffer)
+        mp3_buffer.seek(0)
+        return mp3_buffer
+    except Exception as e:
+        st.error(f"Text to speech error: {e}")
+        return None
 
 def play_audio_from_bytesio(mp3_buffer, key=None):
     if mp3_buffer is None:
@@ -159,14 +121,19 @@ def play_audio_from_bytesio(mp3_buffer, key=None):
     b64_encoded = base64.b64encode(audio_bytes).decode()
     audio_html = f"""
     <audio controls key="{key}">
-        <source src="data:audio/mp3;base64,{b64_encoded}" type="audio/mp3" />
-        Your browser does not support the audio element.
+    <source src="data:audio/mp3;base64,{b64_encoded}" type="audio/mp3" />
+    Your browser does not support the audio element.
     </audio>
     """
     st.markdown(audio_html, unsafe_allow_html=True)
 
 
+
+
+# --------------------------------------------------
 # UI Start
+# --------------------------------------------------
+
 st.set_page_config(page_title="LLaMA PDF Q&A with Speech", layout="wide")
 st.title("📄 Hands-on Session")
 
@@ -236,7 +203,7 @@ if st.session_state.get("doc_chunks") is not None and st.session_state.get("doc_
     st.subheader("🎛️ Hyperparameters")
     col1, col2 = st.columns(2)
     temperature = col1.slider("Temperature", 0.0, 1.0, 0.7, 0.05)
-    max_tokens = col2.slider("Max tokens", 50, 150, 100, 10)
+    max_tokens = col2.slider("Max tokens", 50, 300, 256, 10)
     question = st.text_input("🔎 Ask a question about the PDF:")
 
     if st.button("🎤 Get Answer with Speech"):
@@ -257,11 +224,15 @@ if st.session_state.get("doc_chunks") is not None and st.session_state.get("doc_
                 )
                 st.session_state["last_answer"] = answer
 
+            
+            
     if st.session_state.get("last_answer"):
-        st.markdown("### 💬 Text Answer")
-        st.write(st.session_state["last_answer"])
-        st.markdown("### 🎧 Speech Output")
-        audio_buffer = sync_tts(st.session_state["last_answer"])
-        play_audio_from_bytesio(audio_buffer, key=f"audio_{hash(st.session_state['last_answer'])}")
+    	st.markdown("### 💬 Text Answer")
+    	st.write(st.session_state["last_answer"])
+    	st.markdown("### 🎧 Speech Output")
+    	audio_buffer = tts_to_bytesio(st.session_state["last_answer"])
+    	play_audio_from_bytesio(audio_buffer, 		key=f"audio_{hash(st.session_state['last_answer'])}")
+
+
 else:
     st.info("Please upload a PDF to begin.")
