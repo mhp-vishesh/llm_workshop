@@ -1,19 +1,21 @@
-streamlit==1.49.1
+
+
+streamlit>=1.24.0
 matplotlib==3.10.6
 PyPDF2==3.0.1
-transformers==4.56.1
-torch==2.8.0
-accelerate  # Needed for device_map in transformers
-tokenizers==0.22.0
-sentence-transformers==5.1.0
-sentencepiece==0.2.1
-numpy==2.3.3
-pandas==2.3.2
+torch>=2.0.0,<3.0.0
+accelerate>=0.20.0
+bitsandbytes>=0.42.0
+numpy>=1.26.0,<2.0.0
+pandas>=1.5.0,<2.3.0
 scikit-learn==1.7.2
 requests==2.32.5
-plotly==6.3.0
-gTTS==2.5.4
-bitsandbytes
-
-
-#### modified on 16.09.2025
+plotly>=5.5.0,<6.0.0
+sentencepiece==0.2.1
+databricks-sdk==0.33.0
+huggingface_hub>=0.34.0,<1.0
+transformers>=4.34.0,<5.0.0  # 4-bit support is robust 4.34+
+sentence-transformers>=2.2.2
+tokenizers>=0.13.0,<0.23.0   # checked for compatibility
+edge-tts>=7.2.3
+# gTTS (REMOVE this line if you only use edge-tts)
