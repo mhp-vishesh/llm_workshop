@@ -19,4 +19,5 @@ transformers>=4.34.0,<5.0.0  # 4-bit support is robust 4.34+
 sentence-transformers>=2.2.2
 tokenizers>=0.13.0,<0.23.0   # checked for compatibility
 edge-tts>=7.2.3
+Gets
 # gTTS (REMOVE this line if you only use edge-tts)
