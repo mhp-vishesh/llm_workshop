@@ -10,17 +10,69 @@ import streamlit as st
 
 
 
+
+###
+# Testing
+###
+
+
+from databricks.sdk import WorkspaceClient
+
+def test_model_call():
+    try:
+        client = WorkspaceClient()
+        response = client.foundation_model.completions.create(
+            model="databricks-meta-llama-3-1-8b-instruct",
+            prompt="Hello, test",
+            max_tokens=10,
+        )
+        return response.choices[0].text
+    except Exception as e:
+        return f"Error: {e}"
+
+def main():
+    st.set_page_config(page_title="LLM Workshop", page_icon="🚀", layout="wide")
+    st.title("LLM Workshop with Databricks")
+
+    # Your existing UI functions
+    # render_header()
+    # render_overview_intro()
+    # render_overview_expanders()
+
+    output = test_model_call()
+    st.markdown("### Model test output:")
+    st.write(output)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # ------------------------
 # UI Components
 # ------------------------
 def render_header():
     col1, col2, col3 = st.columns([3, 1, 3], vertical_alignment="center")
     with col1:
-        st.image("./resources/LLM.jpeg", use_container_width=True)
+        st.image("./resources/LLM.jpeg")
     with col2:
         st.markdown("<h1 style='text-align:center; color:white;'>@</h1>", unsafe_allow_html=True)
     with col3:
-        st.image("./resources/MHP_LOGO.png", use_container_width=True)
+        st.image("./resources/MHP_LOGO.png")
     st.markdown(" ")  # Spacer
 
 def render_overview_intro():
