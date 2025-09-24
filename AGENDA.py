@@ -10,12 +10,6 @@ import streamlit as st
 
 
 
-
-###
-# Testing
-###
-
-
 from databricks.sdk import WorkspaceClient
 
 def test_model_call():
@@ -44,24 +38,6 @@ def main():
     st.write(output)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # ------------------------
 # UI Components
 # ------------------------
@@ -70,7 +46,7 @@ def render_header():
     with col1:
         st.image("./resources/LLM.jpeg")
     with col2:
-        st.markdown("<h1 style='text-align:center; color:white;'>@</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='text-align:center; color:black;'>@</h1>", unsafe_allow_html=True)
     with col3:
         st.image("./resources/MHP_LOGO.png")
     st.markdown(" ")  # Spacer
@@ -99,17 +75,22 @@ def render_overview_expanders():
                         - Enterprise Benefits
                         - Challenges
                         - Evaluation Methods
-                    - LLM Tokenization
-                    - Attention in LLM's
-                    - Key LLM Parameters
-                    - Training Parameters
+                    - Tokenization Visualization in LLM 
+                    - Chunking in LLM
+                    - Vectorization (Embeddings) & PCA Projection in LLM 
+                    - Understanding Attention in LLM
+                    - Attention Heatmap Visualization 
+                    - Key LLM Parameters & Concepts Explained
+                    - Dynamic Visualization: Epoch, Batch Size & Learning Rate (Chocolate Analogy)
+                    - Transformer Explainer
+                    
                     """)
     with c2:
         with st.expander("LLM PRACTICAL SESSION"):
-            st.write("Hands-on session")
+            st.write("Hands-on Session")
     with c3:
         with st.expander("HELPER"):
-            st.write("Helpful links or E-books")
+            st.write("Helpful links or E-books for better understanding of LLM")
 
 # ------------------------
 # Main function
