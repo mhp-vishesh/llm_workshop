@@ -2,17 +2,16 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.animation import FuncAnimation, PillowWriter
-#import numpy as np
 from transformers import GPT2TokenizerFast, GPT2Tokenizer, GPT2Model
 import torch
 import plotly.express as px
 import time
 import base64
-
-
-
-
-
+from sentence_transformers import SentenceTransformer
+from transformers import AutoTokenizer, AutoModel
+import plotly.graph_objects as go
+import numpy as np
+from sklearn.decomposition import PCA
 
 # ------------------------
 # Cached model loading
@@ -24,12 +23,18 @@ def load_gpt2_model_and_tokenizers():
     tokenizer_fast = GPT2TokenizerFast.from_pretrained("gpt2")
     return tokenizer, model, tokenizer_fast
 
+@st.cache_resource
+def load_embedding_model():
+    return SentenceTransformer('all-MiniLM-L6-v2')
 
-#--------------------------
-#LLM Theory Text
-#--------------------------
+@st.cache_resource
+def load_bert_model():
+    tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+    model = AutoModel.from_pretrained('bert-base-uncased', output_attentions=True)
+    return tokenizer, model
 
 
+# 1) Let's Learn Theory in Fun!
 def display_pdf_in_expander(file_path):
     with st.expander("DataBricks_LLM_eBook", expanded=True):
         with open(file_path, "rb") as f:
@@ -44,18 +49,19 @@ def display_pdf_in_expander(file_path):
         '''
         st.markdown(pdf_display, unsafe_allow_html=True)
 
-# Usage:
+    with st.expander("Show PDF display code"):
+        code = '''
+def display_pdf_in_expander(file_path):
+    with st.expander("DataBricks_LLM_eBook", expanded=True):
+        with open(file_path, "rb") as f:
+            base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+        pdf_display = f"""..."""
+        st.markdown(pdf_display, unsafe_allow_html=True)
+'''
+        st.code(code, language='python')
 
 
-
-
-
-
-
-
-
-
-
+# 2) LLM Overview
 def llm_overview_section():
     with st.expander("LLM Overview", expanded=True):
         st.markdown("""
@@ -95,20 +101,9 @@ def llm_overview_section():
 """)
 
 
-
-
-
-
-
-
-
-
-# ------------------------
-# Cached tokenization GIF creator
-# ------------------------
+# 3) Tokenization
 @st.cache_data
 def create_tokenization_gif(_tokenizer_fast, sentence: str) -> str | None:
-    # Tokenize and clean tokens for display
     tokens = [_t.replace("Ġ", "") for _t in _tokenizer_fast.tokenize(sentence)]
     if not tokens:
         return None
@@ -142,6 +137,7 @@ def create_tokenization_gif(_tokenizer_fast, sentence: str) -> str | None:
     plt.close(fig)
     return "tokenization.gif"
 
+
 def tokenization_section(tokenizer_fast):
     st.header("LLM Tokenization Visualization")
     sentence = st.text_input("Enter a sentence:", "The weather changes every day and often surprises us.")
@@ -152,10 +148,72 @@ def tokenization_section(tokenizer_fast):
     else:
         st.warning("⚠️ Please enter a sentence.")
 
-# ------------------------
-# Attention mechanism explanation
-# ------------------------
+
+# 4) Chunking
+def chunk_text(text):
+    return [s.strip() for s in text.split(".") if s.strip()]
+
+def chunking_section():
+    st.header("Chunking")
+    text = st.text_area("Enter text to chunk", "Attention is all you need. This sentence demonstrates chunking, embeddings, and attention visualization.")
+    chunks = chunk_text(text)
+    st.write(f"Total chunks: {len(chunks)}")
+    col_chunks = st.columns(min(len(chunks), 6)) if len(chunks) > 0 else []
+    for idx, chunk in enumerate(chunks):
+        with col_chunks[idx % 6]:
+            st.markdown(f"**Chunk {idx+1}:**")
+            st.write(chunk)
+    st.info("👉 Chunking breaks long text into manageable pieces for processing.")
+    return chunks
+
+
+# 5) Vectorization Embeddings
+@st.cache_resource
+def load_embedding_model():
+    return SentenceTransformer('all-MiniLM-L6-v2')
+
+def vectorization_section(chunks):
+    embedding_model = load_embedding_model()
+    st.header("Vectorization (Embeddings) & PCA Projection")
+    if chunks:
+        embeddings = embedding_model.encode(chunks)
+        if len(chunks) > 1:
+            pca = PCA(n_components=2)
+            reduced = pca.fit_transform(embeddings)
+            fig = px.scatter(
+                x=reduced[:, 0], y=reduced[:, 1],
+                text=chunks,
+                title="PCA Projection of Chunk Embeddings",
+                labels={"x": "PCA 1", "y": "PCA 2"},
+            )
+            fig.update_traces(marker=dict(size=12, color="blue"))
+            st.plotly_chart(fig, use_container_width=True)
+            st.markdown("""
+            **Explanation:**
+            - Close points indicate chunks with similar meaning.
+            - Axes represent directions of maximum variance in embedding space.
+            """)
+        else:
+            st.info("Need at least 2 chunks to show PCA.")
+    else:
+        st.info("Add text to see embeddings.")
+
+
+# 6) Attention matrix
+@st.cache_resource
+def load_bert_model():
+    tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+    model = AutoModel.from_pretrained('bert-base-uncased', output_attentions=True)
+    return tokenizer, model
+
 def attention_mechanism_expander():
+    st.header("Understanding Attention in LLM")
+    # How to Read & Key Takeaways
+    
+    
+    
+    
+    
     with st.expander("What is Attention in Large Language Models?"):
         st.markdown("""
         ### What Is Attention?
@@ -195,40 +253,113 @@ def attention_mechanism_expander():
         - [AI21 Labs - Attention Mechanisms](https://www.ai21.com/knowledge/attention-mechanisms-language-models/)
         - [Sebastian Raschka Blog - Self-Attention From Scratch](https://sebastianraschka.com/blog/2023/self-attention-from-scratch.html)
         """)
+    
+    with st.expander("Show Attention Mechanism Section Code"):
+        code = '''
+def attention_mechanism_expander():
+    with st.expander("What is Attention in Large Language Models?"):
+        st.markdown("""...""")
+        st.markdown("### The Formula: Scaled Dot-Product Attention")
+        st.latex(r"""...""")
+        st.markdown(r"""...""")
+'''
+        st.code(code, language='python')
 
-# ------------------------
-# Attention heatmap with Plotly
-# ------------------------
-def plot_attention_heatmap(text, tokenizer, model):
-    inputs = tokenizer(text, return_tensors="pt")
-    with torch.no_grad():
-        outputs = model(**inputs)
-    attn = outputs.attentions[0][0, 0].numpy()
-
-    fig = px.imshow(
-        attn,
-        labels=dict(x="Key Token", y="Query Token", color="Attention"),
-        x=[tokenizer.decode([i]) for i in inputs.input_ids[0]],
-        y=[tokenizer.decode([i]) for i in inputs.input_ids[0]],
-        color_continuous_scale='Viridis'
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-def attention_heatmap_section(tokenizer, model):
+def attention_heatmap_section(tokenizer, model, chunks):
     st.header("Attention Heatmap Visualization")
-    text = st.text_area("Enter text", "Deep learning transforms AI.")
-    if text.strip():
-        plot_attention_heatmap(text, tokenizer, model)
-        
-        
+    
+    with st.expander("ℹ️ How to interpret attention & takeaways"):
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("#### How to Read an Attention Map")
+            st.markdown("""
+    - **Rows (Y-axis = Query tokens):** Each token asking: "Where should I look?"
+    - **Columns (X-axis = Key tokens):** Tokens being looked at.
+    - **Color intensity:** Strength of focus (yellow = strong, purple = weak).
+    - **Diagonal dominance:** Tokens often attend strongly to themselves.
+    - **[CLS] connections:** `[CLS]` is attended to often as it aggregates sentence meaning.
+    - **[SEP] connections:** `[SEP]` usually has little meaning but marks sentence boundaries.
+    - **Layers:** Lower layers capture word identity/grammar; higher layers capture abstract meaning.
+    - **Heads:** Each head looks at different relationships (e.g., syntax, long-range dependencies).
+            """)
+        with col2:
+            st.markdown("#### Key Takeaways")
+            st.markdown("""
+    1. Transformers don’t read sequentially — they *focus attention* on relevant words.
+    2. Different heads learn different perspectives of relationships.
+    3. Self-attention allows long-range dependencies (e.g., subject ↔ verb).
+    4. PCA on embeddings shows semantic similarity (close = similar meaning).
+    5. Attention maps explain *why* models make certain predictions.
+            """)
+    
+    
+    
+    
+    if chunks:
+        attention_text = chunks[0]
+        inputs = tokenizer(attention_text, return_tensors="pt")
+        outputs = model(**inputs)
+        attentions = outputs.attentions
+        tokens = tokenizer.convert_ids_to_tokens(inputs["input_ids"][0])
+
+        st.markdown("**Select Layer and Head:**")
+        selected_layer = st.slider("Layer", 0, len(attentions) - 1, 0)
+        selected_head = st.slider("Head", 0, attentions[selected_layer].shape[1] - 1, 0)
+        attn_matrix = attentions[selected_layer][0, selected_head].detach().numpy()
+
+        hover_text = []
+        for i, query in enumerate(tokens):
+            row = []
+            for j, key in enumerate(tokens):
+                row.append(f"Query: {query}<br>Key: {key}<br>Weight: {attn_matrix[i,j]:.3f}")
+            hover_text.append(row)
+
+        fig = go.Figure(data=go.Heatmap(
+            z=attn_matrix,
+            x=tokens,
+            y=tokens,
+            colorscale='Viridis',
+            hoverinfo="text",
+            text=hover_text
+        ))
+        fig.update_layout(
+            title=f"Attention Matrix (Layer {selected_layer}, Head {selected_head})",
+            xaxis_title="Key Tokens",
+            yaxis_title="Query Tokens",
+            width=700,
+            height=600
+        )
+        st.plotly_chart(fig)
+
+        st.markdown("#### Layer and Head Details")
+        st.info(
+            f"""
+**Layer {selected_layer}:**  
+Lower layers focus more on local syntax or word-identity, while higher layers pay more attention to high-level meaning or long-distance relations.
+
+**Head {selected_head}:**  
+Each head learns a different way of connecting tokens—it might track subjects, verbs, punctuation, or other relationships.
+            """
+        )
+
+        with st.expander("What are [CLS] and [SEP] tokens?"):
+            st.markdown("""
+**[CLS]:** Classification token added at input start.  
+- Used for aggregating global sentence meaning (e.g., for classification tasks).
+
+**[SEP]:** Separator token.  
+- Used as a boundary between sentences or at the end.
+
+You often see strong attention to [CLS] (for summarization) and [SEP] (for division between sentence parts). They are *special* tokens introduced during tokenization.
+            """)
+    else:
+        st.info("Add text to see attention matrix.")
         
         
         
 # ------------------------
-# LLM Parameters
+# LLM Parameters Explanation
 # ------------------------
-
-
 def llm_parameters_explanation():
     with st.expander("Key LLM Parameters & Concepts Explained 📚🔍", expanded=False):
         st.markdown("""
@@ -259,33 +390,21 @@ def llm_parameters_explanation():
 
         """)
 
-        # Suggested visualizations or images URLs (replace with local if you have)
-        st.markdown("### Visualizing Concepts")
-        
-        # Visual: Temperature effect (conceptual image)
-        st.image(
-            "./resources/Tempearture.png",
-            caption="Effect of Temperature on model creativity",
-          
-        )
-        
-        st.image(
-            "./resources/Top_parameters.png",
-            caption="Difference between Top-K and Top-P Sampling",
-          
-        )
+        st.image("./resources/Tempearture.png", caption="Effect of Temperature on model creativity")
+        st.image("./resources/Top_parameters.png", caption="Difference between Top-K and Top-P Sampling")
         st.markdown("""
         For more detailed explanations and interactive visualizations, refer to the external resources within this app and beyond.
         """)
 
-# Usage: Call `llm_parameters_explanation()` inside your chocolate_animation_section before rendering controls
+    with st.expander("Show LLM Parameters Explanation code"):
+        code = '''def llm_parameters_explanation():
+    with st.expander("Key LLM Parameters & Concepts Explained 📚🔍", expanded=False):
+        st.markdown(\"\"\"...\"\"\")
+        # images and markdown...
+'''
+        st.code(code, language='python')
 
-
-
-
-# ------------------------
-# Chocolate animation analogy
-# ------------------------
+# 7) Chocolate animation
 def plot_chocolate_animation(total_chocolates, batch_size, epochs, learning_rate):
     plt.rcParams.update({'font.family': 'Segoe UI', 'font.size': 14})
     steps_per_epoch = (total_chocolates + batch_size - 1) // batch_size
@@ -302,12 +421,10 @@ def plot_chocolate_animation(total_chocolates, batch_size, epochs, learning_rate
         fig, ax = plt.subplots(figsize=(fig_width, fig_height))
         ax.axis('off')
 
-        # Progress line
         ax.hlines(0, 0, total_steps * learning_rate, colors='#cccccc', linestyles='dashed', linewidth=2)
         ax.plot(0, 0, "o", markersize=16, color="#27ae60", label="Start", zorder=5)
         ax.plot(total_steps * learning_rate, 0, "o", markersize=16, color="#c0392b", label="End", zorder=5)
 
-        # Chocolates as rounded rectangles
         for past_step in range(step_num + 1):
             p_epoch, p_step = divmod(past_step, steps_per_epoch)
             chocs_left = total_chocolates - p_step * batch_size
@@ -328,7 +445,6 @@ def plot_chocolate_animation(total_chocolates, batch_size, epochs, learning_rate
             ax.text(pos + learning_rate * 0.45, y_offset + 0.25, f"{chocs}",
                     ha='center', va='center', fontsize=14, color='white')
 
-        # Highlight current step
         rect_cur = patches.FancyBboxPatch(
             (pos_current, 1.0), learning_rate * 0.9, 0.5,
             boxstyle="round,pad=0.05",
@@ -342,12 +458,10 @@ def plot_chocolate_animation(total_chocolates, batch_size, epochs, learning_rate
         ax.text(pos_current + learning_rate * 0.45, 1.7, f"Active\n({chocolates_picked})",
                 ha='center', va='bottom', fontsize=16, fontweight='bold', color='black', zorder=7)
 
-        # Epoch labels on right
         for e in range(epochs):
             ax.text(total_steps * learning_rate + learning_rate * 0.7, -e * 0.8 + 0.25,
                     f"Epoch {e + 1}", ha='left', fontsize=14, color='#636e72')
 
-        # Set limits
         ax.set_xlim(-learning_rate * 0.5, total_steps * learning_rate + learning_rate * 3)
         ax.set_ylim(-epochs * 0.9, 2)
 
@@ -359,8 +473,6 @@ def plot_chocolate_animation(total_chocolates, batch_size, epochs, learning_rate
 
     st.success("🏁 Finished carrying all chocolates!")
 
-
-
 def chocolate_animation_section():
     with st.container():
         with st.expander("Dynamic Visualization: Epoch, Batch Size & Learning Rate (Chocolate Analogy)", expanded=False):
@@ -369,26 +481,43 @@ def chocolate_animation_section():
             ep = st.number_input("🔁 Epochs (Number of full passes)", min_value=1, value=5)
             lr = st.slider("📈 Learning Rate (Step size)", min_value=0.1, max_value=3.0, value=1.0, step=0.1)
 
-            # Create two columns side-by-side
-            col1, col2 = st.columns([3, 1])  # adjust widths as needed
-            
-            # Left column: chocolate animation plot and progress
+            col1, col2 = st.columns([3, 1])
             with col1:
                 plot_chocolate_animation(total_chocs, batch, ep, lr)
-            
-            # Right column: video player
             with col2:
                 st.video("./resources/neural_network_working.mp4", format="video/mp4", start_time=0)
 
+    with st.expander("Show Chocolate Animation Section code"):
+        code = '''def chocolate_animation_section():
+    with st.container():
+        with st.expander("Dynamic Visualization: Epoch, Batch Size & Learning Rate (Chocolate Analogy)", expanded=False):
+            total_chocs = st.number_input("🍫 Total Chocolates (Dataset size)", min_value=1, value=32)
+            batch = st.number_input("✋ Batch Size (Handful size)", min_value=1, max_value=total_chocs, value=4)
+            ep = st.number_input("🔁 Epochs (Number of full passes)", min_value=1, value=5)
+            lr = st.slider("📈 Learning Rate (Step size)", min_value=0.1, max_value=3.0, value=1.0, step=0.1)
+
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                plot_chocolate_animation(total_chocs, batch, ep, lr)
+            with col2:
+                st.video("./resources/neural_network_working.mp4", format="video/mp4", start_time=0)'''
+        st.code(code, language='python')
 
 
-
-
-
-# ------------------------
-# Workshop resources dropdown
-# ------------------------
+# 8) Workshop resources dropdown
 def workshop_resources_dropdown():
+    with st.expander("Workshop Links & Resources", expanded=False):
+        options = ["Select a resource", "Transformer Explainer (Interactive Demo)"]
+        choice = st.selectbox("Workshop Links & Resources", options, index=0, key="workshop_resource_select")
+
+        if choice == "Transformer Explainer (Interactive Demo)":
+            st.markdown(
+                '<iframe src="https://poloclub.github.io/transformer-explainer/" width="100%" height="600" frameborder="0" allowfullscreen></iframe>',
+                unsafe_allow_html=True
+            )
+
+    with st.expander("Show Workshop Resources Dropdown code"):
+        code = '''def workshop_resources_dropdown():
     with st.expander("Workshop Links & Resources", expanded=False):
         options = ["Select a resource", "Transformer Explainer (Interactive Demo)"]
         choice = st.selectbox("Workshop Links & Resources", options, index=0, key="workshop_resource_select")
@@ -397,30 +526,63 @@ def workshop_resources_dropdown():
             st.markdown(
                 '<iframe src="https://poloclub.github.io/transformer-explainer/" width="100%" height="600" frameborder="0" allowfullscreen></iframe>',
                 unsafe_allow_html=True
-            )
+            )'''
+        st.code(code, language='python')
+
 
 # ------------------------
 # Main orchestrator
 # ------------------------
 def main():
-    
-    st.markdown("<h1 style='text-align: center;'>Let us learn theory in a fun way!!!!</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>Let's learn theory in a fun way!!!!</h1>", unsafe_allow_html=True)
     st.markdown("---")
-    
-    
-    
+
+    # 1. Teach theory with data ebook
     display_pdf_in_expander("./resources/LLM_guide.pdf")
-    
     st.markdown("---")
-    
+
+    # 2. LLM overview section
     llm_overview_section()
+    st.markdown("---")
+
+    # 3. Load tokenizers/models for tokenization visualization
     tokenizer, model, tokenizer_fast = load_gpt2_model_and_tokenizers()
+
+    # 4. Tokenization visualization with GIF
     tokenization_section(tokenizer_fast)
-    attention_heatmap_section(tokenizer, model)
+    st.markdown("---")
+
+    # 5. Chunking
+    chunks = chunking_section()
+    st.markdown("---")
+
+    # 6. Vectorization embeddings & PCA plot
+    vectorization_section(chunks)
+    st.markdown("---")
+
+    # 7. Load tokenizer and model for attention
+    tokenizer_bert, model_bert = load_bert_model()
+
+    # 8. Attention mechanism explanation
     attention_mechanism_expander()
+    st.markdown("---")
+
+    # 9. Attention heatmap visualization
+    attention_heatmap_section(tokenizer_bert, model_bert, chunks)
+    st.markdown("---")
+
+    # 10. LLM Parameters explanation
     llm_parameters_explanation()
+    st.markdown("---")
+
+    # 11. Chocolate animation analogy
     chocolate_animation_section()
+    st.markdown("---")
+
+    # 12. Workshop resources dropdown
     workshop_resources_dropdown()
+    st.markdown("---")
+
 
 if __name__ == "__main__":
     main()
