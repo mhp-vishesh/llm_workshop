@@ -273,27 +273,24 @@ def attention_heatmap_section(tokenizer, model, chunks):
         with col1:
             st.markdown("#### How to Read an Attention Map")
             st.markdown("""
-    - **Rows (Y-axis = Query tokens):** Each token asking: "Where should I look?"
-    - **Columns (X-axis = Key tokens):** Tokens being looked at.
-    - **Color intensity:** Strength of focus (yellow = strong, purple = weak).
-    - **Diagonal dominance:** Tokens often attend strongly to themselves.
-    - **[CLS] connections:** `[CLS]` is attended to often as it aggregates sentence meaning.
-    - **[SEP] connections:** `[SEP]` usually has little meaning but marks sentence boundaries.
-    - **Layers:** Lower layers capture word identity/grammar; higher layers capture abstract meaning.
-    - **Heads:** Each head looks at different relationships (e.g., syntax, long-range dependencies).
+- **Rows (Y-axis = Query tokens):** Each token asking: "Where should I look?"
+- **Columns (X-axis = Key tokens):** Tokens being looked at.
+- **Color intensity:** Strength of focus (yellow = strong, purple = weak).
+- **Diagonal dominance:** Tokens often attend strongly to themselves.
+- **[CLS] connections:** `[CLS]` is attended to often as it aggregates sentence meaning.
+- **[SEP] connections:** `[SEP]` usually has little meaning but marks sentence boundaries.
+- **Layers:** Lower layers capture word identity/grammar; higher layers capture abstract meaning.
+- **Heads:** Each head looks at different relationships (e.g., syntax, long-range dependencies).
             """)
         with col2:
             st.markdown("#### Key Takeaways")
             st.markdown("""
-    1. Transformers don’t read sequentially — they *focus attention* on relevant words.
-    2. Different heads learn different perspectives of relationships.
-    3. Self-attention allows long-range dependencies (e.g., subject ↔ verb).
-    4. PCA on embeddings shows semantic similarity (close = similar meaning).
-    5. Attention maps explain *why* models make certain predictions.
+1. Transformers don’t read sequentially — they *focus attention* on relevant words.
+2. Different heads learn different perspectives of relationships.
+3. Self-attention allows long-range dependencies (e.g., subject ↔ verb).
+4. PCA on embeddings shows semantic similarity (close = similar meaning).
+5. Attention maps explain *why* models make certain predictions.
             """)
-    
-    
-    
     
     if chunks:
         attention_text = chunks[0]
@@ -344,16 +341,27 @@ Each head learns a different way of connecting tokens—it might track subjects,
 
         with st.expander("What are [CLS] and [SEP] tokens?"):
             st.markdown("""
-**[CLS]:** Classification token added at input start.  
-- Used for aggregating global sentence meaning (e.g., for classification tasks).
+**[CLS]**  
+Classification token added at the start of input.  
+It helps BERT summarize the meaning of the entire sentence for tasks like classification.
 
-**[SEP]:** Separator token.  
-- Used as a boundary between sentences or at the end.
+**[SEP]**  
+Separator token used as a boundary between sentences or segments.  
+It helps BERT know where a sentence or section ends and the next one begins.
 
-You often see strong attention to [CLS] (for summarization) and [SEP] (for division between sentence parts). They are *special* tokens introduced during tokenization.
+These special tokens guide the model in understanding and organizing the input during tokenization.
+
+Input sentence: "I like apples."  
+Tokenized input fed into BERT:  
+[CLS] I like apples . [SEP]
+
+For two sentences: "I like apples." and "You like oranges."  
+Tokenized input:  
+[CLS] I like apples . [SEP] You like oranges . [SEP]
             """)
     else:
         st.info("Add text to see attention matrix.")
+
         
         
         
